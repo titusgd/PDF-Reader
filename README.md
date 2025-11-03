@@ -169,10 +169,3 @@ PDFReader/
 - 遇到問題請查看 [INSTALL.md](INSTALL.md) 的問題排除章節
 - 詳細功能說明請參考 [USAGE.md](USAGE.md)
 
----
-
-<div align="center">
-
-**使用 ❤️ 和 Python 建構**
-
-</div>
