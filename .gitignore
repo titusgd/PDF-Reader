@@ -59,3 +59,4 @@ Thumbs.db
 recent_files.json
 bookmarks/
 
+*.gguf
