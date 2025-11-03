@@ -6,7 +6,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QTabWidget, QListWidget,
                              QListWidgetItem, QLabel, QPushButton, QHBoxLayout,
                              QDialog, QLineEdit, QTextEdit, QDialogButtonBox,
-                             QComboBox, QProgressBar, QGroupBox, QScrollArea)
+                             QComboBox, QProgressBar, QGroupBox, QScrollArea, QButtonGroup,
+                             QRadioButton)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon
 
@@ -171,6 +172,7 @@ class TranslationWidget(QWidget):
     translate_selected_requested = pyqtSignal(str, str)  # 翻譯選取文字 (from_lang, to_lang)
     translate_document_requested = pyqtSignal(str, str)  # 翻譯整份文件 (from_lang, to_lang)
     language_changed = pyqtSignal(str, str)  # 語言設定變更 (from_lang, to_lang)
+    selection_mode_changed = pyqtSignal(str)  # 選取模式變更 (rect, point, range)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -214,6 +216,42 @@ class TranslationWidget(QWidget):
         lang_layout.addLayout(from_layout)
         lang_layout.addLayout(to_layout)
         main_layout.addWidget(lang_group)
+        
+        # 選取模式選擇
+        selection_group = QGroupBox("文字選取模式")
+        selection_layout = QVBoxLayout(selection_group)
+        
+        self.selection_mode_group = QButtonGroup(self)
+        
+        # 矩形選取（預設）
+        self.rect_mode_radio = QRadioButton("🔲 矩形拖曳選取（傳統）")
+        self.rect_mode_radio.setChecked(True)
+        self.rect_mode_radio.setToolTip("拖曳滑鼠形成矩形框選取文字")
+        self.selection_mode_group.addButton(self.rect_mode_radio, 0)
+        selection_layout.addWidget(self.rect_mode_radio)
+        
+        # 點擊選取
+        self.point_mode_radio = QRadioButton("👆 點擊快速選取")
+        self.point_mode_radio.setToolTip("點擊文字位置，自動選取周圍區域")
+        self.selection_mode_group.addButton(self.point_mode_radio, 1)
+        selection_layout.addWidget(self.point_mode_radio)
+        
+        # 範圍選取
+        self.range_mode_radio = QRadioButton("📏 兩點定範圍選取")
+        self.range_mode_radio.setToolTip("點擊兩次定義選取範圍的起點和終點")
+        self.selection_mode_group.addButton(self.range_mode_radio, 2)
+        selection_layout.addWidget(self.range_mode_radio)
+        
+        # 智能文字選取（新）
+        self.smart_mode_radio = QRadioButton("✨ 智能文字選取（推薦）")
+        self.smart_mode_radio.setToolTip("像文字編輯器一樣，逐字逐句選取文字")
+        self.selection_mode_group.addButton(self.smart_mode_radio, 3)
+        selection_layout.addWidget(self.smart_mode_radio)
+        
+        # 連接信號
+        self.selection_mode_group.buttonClicked.connect(self.on_selection_mode_changed)
+        
+        main_layout.addWidget(selection_group)
         
         # 操作按鈕
         button_layout = QHBoxLayout()
@@ -329,6 +367,17 @@ class TranslationWidget(QWidget):
         from_lang = self.from_lang_combo.currentText()
         to_lang = self.to_lang_combo.currentText()
         self.language_changed.emit(from_lang, to_lang)
+    
+    def on_selection_mode_changed(self, button):
+        """選取模式變更"""
+        if button == self.rect_mode_radio:
+            self.selection_mode_changed.emit("rect")
+        elif button == self.point_mode_radio:
+            self.selection_mode_changed.emit("point")
+        elif button == self.range_mode_radio:
+            self.selection_mode_changed.emit("range")
+        elif button == self.smart_mode_radio:
+            self.selection_mode_changed.emit("smart")
     
     def on_original_text_changed(self):
         """原文文字改變事件"""

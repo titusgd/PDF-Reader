@@ -171,6 +171,60 @@ class PDFHandler(QObject):
             text = page.get_textbox(fitz_rect)
             return text.strip() if text else ""
     
+    def get_text_words(self, page_num: int):
+        """
+        獲取頁面上所有文字及其位置（用於智能選取）
+        
+        Args:
+            page_num: 頁碼
+            
+        Returns:
+            文字區塊列表 [(x0, y0, x1, y1, word, block_no, line_no, word_no)]
+        """
+        page = self.get_page(page_num)
+        if not page:
+            return []
+        
+        # 使用 "words" 模式獲取每個單詞的位置
+        words = page.get_text("words")
+        return words
+    
+    def get_text_from_words(self, page_num: int, selected_words):
+        """
+        從選取的單詞列表提取文字
+        
+        Args:
+            page_num: 頁碼
+            selected_words: 選取的單詞列表 (from get_text("words"))
+            
+        Returns:
+            組合的文字
+        """
+        if not selected_words:
+            return ""
+        
+        # 按行和位置排序
+        sorted_words = sorted(selected_words, key=lambda w: (w[5], w[6], w[7]))  # block_no, line_no, word_no
+        
+        # 組合文字
+        result_parts = []
+        prev_line = None
+        
+        for word_info in sorted_words:
+            word = word_info[4]  # 文字內容
+            line_no = word_info[6]  # 行號
+            
+            # 如果換行，添加空格分隔
+            if prev_line is not None and line_no != prev_line:
+                result_parts.append('\n')
+            elif prev_line is not None:
+                result_parts.append(' ')
+            
+            result_parts.append(word)
+            prev_line = line_no
+        
+        return "".join(result_parts)
+    
     def search_text(self, text: str, page_num: Optional[int] = None) -> List[Tuple[int, List]]:
         """
         搜尋文字

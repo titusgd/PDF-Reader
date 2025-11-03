@@ -292,6 +292,7 @@ class MainWindow(QMainWindow):
         translation_widget = self.sidebar.get_translation_widget()
         translation_widget.translate_selected_requested.connect(self.on_translate_selected_requested)
         translation_widget.translate_document_requested.connect(self.on_translate_document_requested)
+        translation_widget.selection_mode_changed.connect(self.on_selection_mode_changed)
         
         # 翻譯管理器信號
         self.translation_manager.translation_ready.connect(self.on_translation_ready)
@@ -347,6 +348,12 @@ class MainWindow(QMainWindow):
                 self.current_page = page_num
                 self.toolbar.set_current_page(page_num)
                 self.sidebar.get_thumbnail_widget().set_current_page(page_num)
+                
+                # 載入頁面文字資訊（用於智能選取）
+                words = self.pdf_handler.get_text_words(page_num)
+                page_widget = self.pdf_viewer.get_page_widget()
+                page_widget.set_page_words(words, page_num)
+                page_widget.pdf_handler = self.pdf_handler
     
     def on_page_changed(self, page_num: int):
         """頁面變更事件"""
@@ -652,8 +659,15 @@ class MainWindow(QMainWindow):
     
     def on_text_selected(self, rect):
         """文字被選取事件"""
-        # 提取選取區域的文字
-        text = self.pdf_handler.get_text_from_rect(self.current_page, rect)
+        page_widget = self.pdf_viewer.get_page_widget()
+        
+        # 智能選取模式：從選取的文字列表提取
+        if page_widget.text_selection_mode == "smart" and page_widget.selected_words:
+            text = self.pdf_handler.get_text_from_words(self.current_page, page_widget.selected_words)
+        else:
+            # 其他模式：從矩形區域提取
+            text = self.pdf_handler.get_text_from_rect(self.current_page, rect)
+        
         if text:
             # 更新翻譯面板的原文
             translation_widget = self.sidebar.get_translation_widget()
@@ -788,6 +802,20 @@ class MainWindow(QMainWindow):
         translation_widget.show_error(error_message)
         translation_widget.enable_buttons(True)
         self.statusBar().showMessage(f"翻譯錯誤: {error_message}")
+    
+    def on_selection_mode_changed(self, mode: str):
+        """選取模式變更"""
+        page_widget = self.pdf_viewer.get_page_widget()
+        page_widget.set_text_selection_mode(mode)
+        
+        # 更新狀態列提示
+        mode_names = {
+            "rect": "矩形拖曳選取",
+            "point": "點擊快速選取",
+            "range": "兩點定範圍選取",
+            "smart": "智能文字選取（點擊或拖曳選取文字）"
+        }
+        self.statusBar().showMessage(f"選取模式: {mode_names.get(mode, mode)}")
     
     def closeEvent(self, event):
         """關閉事件"""
